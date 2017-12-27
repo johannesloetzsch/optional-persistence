@@ -1,0 +1,87 @@
+#!/bin/sh -e
+
+PREREQS=""
+
+prereqs() { echo "$PREREQS"; }
+
+case "$1" in
+    prereqs)
+    prereqs
+    exit 0
+    ;;
+esac
+
+. /bin/live-boot
+
+. /scripts/functions
+
+argparse ()
+{
+	set -- $(cat /proc/cmdline)
+	for x in "$@"; do
+		case "$x" in
+		        join=*)
+	        	JOIN="${x#join=}"
+		        ;;
+		esac
+	done
+
+	JOIN=${JOIN:-"workdir=/live/persistence/work/,upperdir=/live/persistence/rw/,lowerdir=/live/squashfs/"}
+}
+argparse
+
+mount_join ()
+{
+	## mount the overlay filesystem
+	mount -t overlay -o noatime,${JOIN} none /live/join
+}
+
+join_to_root ()
+{
+	## before the join is located at /live/join ; afterwars at /root (where initramfs expects it to be / later)
+	## allows to move everything joined into a ramdisk (optional via option 'alltoram')
+
+	if grep ' alltoram' /proc/cmdline ; then
+		mount -t tmpfs -o size=80% none /root
+		#rsync -a -r --info=progress2 /live/join/* /root
+		rsync -a -r --info=progress2 /live/squashfs/* /root
+		ls /root
+		umount /live/join
+	else
+		mount --move /live/join /root
+	fi
+}
+
+mountroot ()
+{
+	log_begin_msg "mountroot from /scripts/live-orig"
+		# initramfs-tools entry point for live-boot is mountroot(); function
+		Live
+	log_end_msg
+
+	log_begin_msg "mountroot HACKED /scripts/live"
+		PERSISTENCE=`ls -d /root/lib/live/mount/persistence/*/rw | sed 's@/rw@@'`
+		mkdir -p /live/persistence /live/iso /live/squashfs /live/tmp /live/join
+		mount --move $PERSISTENCE /live/persistence
+		mount --move /root/lib/live/mount/medium /live/iso
+		mount --move /root/lib/live/mount/rootfs/filesystem.squashfs /live/squashfs
+		mount --move /root/lib/live/mount/overlay /live/tmp
+		mkdir /live/tmp/rw /live/tmp/work
+		umount /root
+
+		mount_join
+
+		join_to_root
+
+		## cleanup & move mountpoints to /lib/live
+		rmdir /root/lib/live/mount/persistence/*
+		mkdir -p $PERSISTENCE /root/lib/live/mount/medium /root/lib/live/mount/rootfs/filesystem.squashfs /root/lib/live/mount/overlay
+		mount --move /live/persistence $PERSISTENCE
+		mount --move /live/iso /root/lib/live/mount/medium
+		mount --move /live/squashfs /root/lib/live/mount/rootfs/filesystem.squashfs
+		mount --move /live/tmp /root/lib/live/mount/overlay
+		rmdir -p /live/persistence /live/iso /live/squashfs /live/tmp /live/join
+	log_end_msg
+
+	log_success_msg "mountroot"
+}
