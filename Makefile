@@ -87,7 +87,7 @@ grub-install:
 	#grub-install --force --no-floppy --root-directory=${MOUNTPOINT} ${DEVICE_PARTITION}
 
 grub-install-if-nonexisting:
-	[ -d ${MOUNTPOINT}/boot/grub/ ] || (make grub-install)
+	[ -d ${MOUNTPOINT}/boot/grub/i386-pc ] || (make grub-install)
 
 ${MOUNTPOINT}/boot/grub/grub.cfg:	rsync
 
@@ -121,7 +121,7 @@ chroot-umount:
 	- umount /tmp/squash
 	- umount /tmp/iso
 
-chroot-mount: chroot-umount
+chroot-mount: chroot-umount mount
 	which /usr/bin/unionfs-fuse || apt install unionfs-fuse
 
 	- mkdir /tmp/iso /tmp/squash /tmp/joined

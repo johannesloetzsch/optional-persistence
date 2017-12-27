@@ -2,8 +2,8 @@
 
 * a Makefile to create linux live sticks with optional persistence
 * during boot grub will ask to choose between 2 options
- * persistence+squashfs (setup mode)
- * tmpfs on top of persistence+squashfs (fast and forgets changes after reboot)
+  * persistence+squashfs (setup mode)
+  * tmpfs on top of persistence+squashfs (fast and forgets changes after reboot)
 
 ## How to use
 
